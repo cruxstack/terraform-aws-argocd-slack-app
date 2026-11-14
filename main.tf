@@ -22,6 +22,10 @@ locals {
     LOG_LEVEL            = var.lambda_config.log_level
     SLACK_BOT_TOKEN      = "${local.ssm_parameter_arn_prefix}SLACK_BOT_TOKEN"
     SLACK_SIGNING_SECRET = "${local.ssm_parameter_arn_prefix}SLACK_SIGNING_SECRET"
+    SLACK_CLIENT_ID      = "${local.ssm_parameter_arn_prefix}SLACK_CLIENT_ID"
+    SLACK_CLIENT_SECRET  = "${local.ssm_parameter_arn_prefix}SLACK_CLIENT_SECRET"
+    SLACK_TEAM           = "${local.ssm_parameter_arn_prefix}SLACK_TEAM"
+    SSM_KMS_KEY_ID       = var.kms_key_arn != null ? var.kms_key_arn : ""
     TABLE_NAME           = module.this.id
     ARGOCD_SLACK_CONFIG  = local.app_config_json
   }
@@ -284,6 +288,10 @@ resource "aws_apigatewayv2_route" "this" {
     "POST /slack/commands",
     "POST /slack/events",
     "GET /healthz",
+    "GET /setup",
+    "POST /setup",
+    "GET /slack/oauth/install",
+    "GET /slack/oauth/callback",
   ]) : toset([])
 
   api_id    = aws_apigatewayv2_api.this[0].id
@@ -403,6 +411,18 @@ data "aws_iam_policy_document" "this" {
     resources = ["${local.ssm_parameter_arn_prefix}*"]
   }
 
+  # the installer writes the credentials it creates; only while setup is on
+  dynamic "statement" {
+    for_each = var.app_config.setup.enabled ? [1] : []
+
+    content {
+      sid       = "SaveSlackCredentials"
+      effect    = "Allow"
+      actions   = ["ssm:PutParameter", "ssm:AddTagsToResource"]
+      resources = ["${local.ssm_parameter_arn_prefix}*"]
+    }
+  }
+
   statement {
     sid    = "State"
     effect = "Allow"
@@ -455,7 +475,7 @@ data "aws_iam_policy_document" "this" {
     content {
       sid       = "UseKey"
       effect    = "Allow"
-      actions   = ["kms:Decrypt", "kms:GenerateDataKey"]
+      actions   = var.app_config.setup.enabled ? ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"] : ["kms:Decrypt", "kms:GenerateDataKey"]
       resources = [var.kms_key_arn]
     }
   }

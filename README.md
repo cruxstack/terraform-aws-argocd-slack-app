@@ -19,6 +19,8 @@ and a submodule that gives the function read-only access to each EKS cluster.
 - **Mutes from Slack** - Per app, cluster, or environment, with an expiry, from
   message buttons, a modal, `/argocd`, or the app's Home tab
 - **Daily digest** - Apps unhealthy for longer than a day, instead of repeats
+- **Web installer** - A setup page creates the Slack app from its manifest and
+  installs it with OAuth; no URLs or secrets to copy by hand
 - **Read-only cluster access** - The function assumes a role per cluster that an
   EKS access entry maps to a read-only ClusterRole; nothing runs in the cluster
 - **Secrets in SSM** - The Slack bot token and signing secret are SecureString
@@ -51,6 +53,7 @@ module "argocd_slack" {
 
   app_config = {
     channel = "C0123456789"
+    setup   = { enabled = true } # first deploy only
     clusters = [
       {
         name       = "prod-use1"
@@ -79,23 +82,27 @@ See [examples/complete](examples/complete) for every option.
 
 ### Setting up
 
-1. Create the Slack app from the manifest in
-   [argocd-slack-app's README](https://github.com/cruxstack/argocd-slack-app#slack-app),
-   install it, and invite the bot to the channels it posts to.
-2. Store its bot token and signing secret as SecureString parameters under the
-   prefix, `/<id>/` by default:
-
-   ```sh
-   aws ssm put-parameter --type SecureString --name /argocd-slack/SLACK_BOT_TOKEN --value "xoxb-..."
-   aws ssm put-parameter --type SecureString --name /argocd-slack/SLACK_SIGNING_SECRET --value "..."
-   ```
-
-3. Apply this module, then the `cluster-reader` submodule for each cluster. The
-   reader's trust policy names the function's role, so it must exist first.
-4. Put the `slack_request_urls` outputs in the Slack app's manifest.
+1. Apply this module with `app_config.setup.enabled = true`, then the
+   `cluster-reader` submodule for each cluster. The reader's trust policy names
+   the function's role, so it must exist first.
+2. Open the `setup_url` output. Paste a Slack app configuration token (from
+   [api.slack.com/apps](https://api.slack.com/apps) → *Your App Configuration
+   Tokens*) and the page creates the app with every URL filled in, or follow
+   its link to create the app yourself from a prefilled manifest and paste the
+   credentials back.
+3. Click **Install to Slack**. The callback saves the bot token. Every
+   credential lands in SSM Parameter Store under the prefix (`/<id>/` by
+   default), never in Terraform state.
+4. Invite the bot to its channels, set `app_config.setup.enabled = false` and
+   apply again, which also drops the function's write access to SSM.
 
 Start with `app_config.dry_run = true` to see the messages in the function's
 logs, or `app_config.channel_override` to send every cluster to a test channel.
+
+To set the app up by hand instead, create it from the manifest in
+[argocd-slack-app](https://github.com/cruxstack/argocd-slack-app#slack-app),
+write `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` under the prefix yourself, and
+use the `slack_request_urls` outputs in the manifest.
 
 ### Reaching the clusters
 
@@ -124,6 +131,7 @@ is optional; the app's README describes each one.
 | `annotations`      | `""`                                           | Application annotations holding `repo`, `commit`, `actor`, `pr`, `title`, `run_url`           |
 | `scm`              | GitHub URLs                                    | `commit_url` and `pr_url` templates with `{repo}`, `{commit}`, `{pr}`                         |
 | `links`            | `[]`                                           | buttons on every message, as `text` and `url` templates                                       |
+| `setup`            | off                                            | the installer: `enabled`, `app_name` (`Argo CD`), `command` (`/argocd`), `base_url`           |
 | `clusters`         | n/a                                            | the Argo CD instances to watch; see below                                                     |
 
 Each cluster takes `name` (as people type it in `/argocd mute`), `cluster` (the
@@ -165,6 +173,7 @@ for more details on these variables.
 
 | Name                   | Description                                                      |
 | ---------------------- | ---------------------------------------------------------------- |
+| `setup_url`            | installer page, while `app_config.setup.enabled` is on           |
 | `slack_request_urls`   | `commands`, `interactivity`, and `events` URLs for the Slack app |
 | `api_endpoint`         | base URL of the HTTP API                                         |
 | `role_arn`             | ARN of the function's role; give it to each cluster reader       |
@@ -172,7 +181,7 @@ for more details on these variables.
 | `function_name`        | name of the Lambda function                                      |
 | `function_arn`         | ARN of the Lambda function                                       |
 | `table_name`           | name of the DynamoDB table                                       |
-| `ssm_parameter_prefix` | SSM path of `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET`         |
+| `ssm_parameter_prefix` | SSM path of the Slack credentials                                |
 
 ## Cluster Reader
 

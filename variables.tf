@@ -3,7 +3,7 @@
 variable "app_version" {
   description = "Git tag, branch, or commit of argocd-slack-app to build. `latest` builds its default branch, which can include breaking changes."
   type        = string
-  default     = "v0.1.0"
+  default     = "v0.2.0"
 
   validation {
     condition     = length(trimspace(var.app_version)) > 0
@@ -59,6 +59,12 @@ variable "app_config" {
       text = string
       url  = string
     })), [])
+    setup = optional(object({
+      enabled  = optional(bool, false)
+      app_name = optional(string, "Argo CD")
+      command  = optional(string, "/argocd")
+      base_url = optional(string, "")
+    }), {})
     clusters = list(object({
       name       = string
       cluster    = string

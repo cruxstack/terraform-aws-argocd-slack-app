@@ -82,7 +82,7 @@ run "defaults" {
 
   assert {
     condition = alltrue([
-      buildkit_artifact.app[0].build_args.APP_VERSION == "v0.1.0",
+      buildkit_artifact.app[0].build_args.APP_VERSION == "v0.2.0",
       buildkit_artifact.app[0].build_args.APP_REPO == "https://github.com/cruxstack/argocd-slack-app.git",
       buildkit_artifact.app[0].build_args.GOARCH == "arm64",
       buildkit_artifact.app[0].artifact_dst_path == "./dist/test/package.zip",
@@ -92,7 +92,7 @@ run "defaults" {
 
   assert {
     condition = alltrue([
-      toset(keys(aws_lambda_function.this[0].environment[0].variables)) == toset(["LOG_LEVEL", "SLACK_BOT_TOKEN", "SLACK_SIGNING_SECRET", "TABLE_NAME", "ARGOCD_SLACK_CONFIG"]),
+      toset(keys(aws_lambda_function.this[0].environment[0].variables)) == toset(["LOG_LEVEL", "SLACK_BOT_TOKEN", "SLACK_SIGNING_SECRET", "SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "SLACK_TEAM", "SSM_KMS_KEY_ID", "TABLE_NAME", "ARGOCD_SLACK_CONFIG"]),
       aws_lambda_function.this[0].environment[0].variables.SLACK_BOT_TOKEN == "arn:aws:ssm:us-east-1:111122223333:parameter/test/SLACK_BOT_TOKEN",
       aws_lambda_function.this[0].environment[0].variables.SLACK_SIGNING_SECRET == "arn:aws:ssm:us-east-1:111122223333:parameter/test/SLACK_SIGNING_SECRET",
       aws_lambda_function.this[0].environment[0].variables.TABLE_NAME == "test",
@@ -116,13 +116,13 @@ run "defaults" {
 
   assert {
     condition = alltrue([
-      toset(keys(aws_apigatewayv2_route.this)) == toset(["POST /slack/interactivity", "POST /slack/commands", "POST /slack/events", "GET /healthz"]),
+      toset(keys(aws_apigatewayv2_route.this)) == toset(["POST /slack/interactivity", "POST /slack/commands", "POST /slack/events", "GET /healthz", "GET /setup", "POST /setup", "GET /slack/oauth/install", "GET /slack/oauth/callback"]),
       aws_apigatewayv2_stage.this[0].name == "$default",
       output.slack_request_urls.commands == "https://abc123.execute-api.us-east-1.amazonaws.com/slack/commands",
       output.slack_request_urls.interactivity == "https://abc123.execute-api.us-east-1.amazonaws.com/slack/interactivity",
       output.slack_request_urls.events == "https://abc123.execute-api.us-east-1.amazonaws.com/slack/events",
     ])
-    error_message = "slack's three request urls and the health check should be routed to the function"
+    error_message = "slack's request urls, the installer and the health check should be routed to the function"
   }
 
   assert {
@@ -176,6 +176,8 @@ run "defaults" {
       aws_cloudwatch_metric_alarm.heartbeat[0].dimensions == null,
       length(aws_security_group.this) == 0,
       output.ssm_parameter_prefix == "/test/",
+      output.setup_url == null,
+      !anytrue([for st in data.aws_iam_policy_document.this[0].statement : st.sid == "SaveSlackCredentials"]),
     ])
     error_message = "a missing heartbeat should alarm, and nothing vpc-related should exist without vpc_config"
   }
@@ -218,6 +220,30 @@ run "cluster_roles_vpc_key_and_prefix" {
       aws_dynamodb_table.this[0].server_side_encryption[0].kms_key_arn == "arn:aws:kms:us-east-1:111122223333:key/0123",
     ])
     error_message = "the prefix, log level, architecture, vpc, and key should all apply"
+  }
+}
+
+run "setup_on" {
+  variables {
+    app_config = {
+      channel = "C0123456789"
+      setup   = { enabled = true }
+      clusters = [
+        { name = "prod-use1", cluster = "prod-use1" },
+      ]
+    }
+  }
+
+  assert {
+    condition = alltrue([
+      anytrue([
+        for st in data.aws_iam_policy_document.this[0].statement :
+        st.sid == "SaveSlackCredentials" && contains(st.actions, "ssm:PutParameter") && toset(st.resources) == toset(["arn:aws:ssm:us-east-1:111122223333:parameter/test/*"])
+      ]),
+      output.setup_url == "${aws_apigatewayv2_api.this[0].api_endpoint}/setup",
+      jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).setup.enabled == true,
+    ])
+    error_message = "with setup on, the function may write its slack credentials and the setup url is output"
   }
 }
 

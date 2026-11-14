@@ -47,7 +47,12 @@ output "table_name" {
 
 # --------------------------------------------------------------------- ssm ---
 
+output "setup_url" {
+  description = "Installer page that creates and installs the Slack app, while app_config.setup.enabled is on"
+  value       = local.enabled && var.app_config.setup.enabled ? "${local.api_endpoint}/setup" : null
+}
+
 output "ssm_parameter_prefix" {
-  description = "SSM path where the function reads SLACK_BOT_TOKEN and SLACK_SIGNING_SECRET"
+  description = "SSM path of the Slack credentials (SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, SLACK_TEAM)"
   value       = local.enabled ? local.ssm_parameter_prefix : null
 }

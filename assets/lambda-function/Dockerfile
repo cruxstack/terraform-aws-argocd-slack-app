@@ -7,7 +7,7 @@ FROM golang:1.27 AS base
 
 # a git tag, branch, or commit of argocd-slack-app; "latest" builds the default
 # branch, which can include breaking changes
-ARG APP_VERSION=v0.1.0
+ARG APP_VERSION=v0.2.0
 ARG APP_REPO=https://github.com/cruxstack/argocd-slack-app.git
 ARG GOARCH=arm64
 
