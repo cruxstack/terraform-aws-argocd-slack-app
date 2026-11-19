@@ -107,6 +107,8 @@ run "defaults" {
       jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).timezone == "UTC",
       jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).grace.incident == "5m",
       jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).scm.commit_url == "https://github.com/{repo}/commit/{commit}",
+      jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).scm.compare_url == "https://github.com/{repo}/compare/{from}...{to}",
+      jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).annotations.changes == "",
       jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).clusters[0].namespace == "argocd",
       jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).clusters[0].enabled == true,
       jsondecode(aws_lambda_function.this[0].environment[0].variables.ARGOCD_SLACK_CONFIG).clusters[0].log_lines == false,

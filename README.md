@@ -117,22 +117,22 @@ EKS, and DynamoDB.
 `app_config` is passed to the function as JSON. Every field except `clusters`
 is optional; the app's README describes each one.
 
-| Field              | Default                                        | What it does                                                                                  |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `channel`          | `""`                                           | Slack channel for clusters that don't set their own                                           |
-| `channel_override` | `""`                                           | send every cluster to this channel, for testing                                               |
-| `dry_run`          | `false`                                        | log Slack calls instead of making them                                                        |
-| `timezone`         | `"UTC"`                                        | zone for message times and the digest's date                                                  |
-| `watch_seconds`    | `55`                                           | how long each poll watches for changes; keep it under a minute                                |
-| `rich_blocks`      | `true`                                         | use the newer Block Kit blocks; the app falls back if Slack refuses them                      |
-| `preview_prefix`   | `"preview-"`                                   | apps with this prefix are flagged for cleanup in the digest when stuck                        |
-| `grace`            | `5m`, `10m`, `15m`, `10m`, `15m`, `24h`, `72h` | `incident`, `autoscaler`, `flap`, `deploy_window`, `stall`, `long_running`, `preview_cleanup` |
-| `owners`           | `{}`                                           | app name to Slack user or user group ID, mentioned on prod failures                           |
-| `annotations`      | `""`                                           | Application annotations holding `repo`, `commit`, `actor`, `pr`, `title`, `run_url`           |
-| `scm`              | GitHub URLs                                    | `commit_url` and `pr_url` templates with `{repo}`, `{commit}`, `{pr}`                         |
-| `links`            | `[]`                                           | buttons on every message, as `text` and `url` templates                                       |
-| `setup`            | off                                            | the installer: `enabled`, `app_name` (`Argo CD`), `command` (`/argocd`), `base_url`           |
-| `clusters`         | n/a                                            | the Argo CD instances to watch; see below                                                     |
+| Field              | Default                                        | What it does                                                                                                                             |
+| ------------------ | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `channel`          | `""`                                           | Slack channel for clusters that don't set their own                                                                                      |
+| `channel_override` | `""`                                           | send every cluster to this channel, for testing                                                                                          |
+| `dry_run`          | `false`                                        | log Slack calls instead of making them                                                                                                   |
+| `timezone`         | `"UTC"`                                        | zone for message times and the digest's date                                                                                             |
+| `watch_seconds`    | `55`                                           | how long each poll watches for changes; keep it under a minute                                                                           |
+| `rich_blocks`      | `true`                                         | use the newer Block Kit blocks; the app falls back if Slack refuses them                                                                 |
+| `preview_prefix`   | `"preview-"`                                   | apps with this prefix are flagged for cleanup in the digest when stuck                                                                   |
+| `grace`            | `5m`, `10m`, `15m`, `10m`, `15m`, `24h`, `72h` | `incident`, `autoscaler`, `flap`, `deploy_window`, `stall`, `long_running`, `preview_cleanup`                                            |
+| `owners`           | `{}`                                           | app name to Slack user or user group ID, mentioned on prod failures                                                                      |
+| `annotations`      | `""`                                           | Application annotations holding `repo`, `commit`, `version`, `actor`, `approved_by`, `pr`, `title`, `run_url`, `changes`                 |
+| `scm`              | GitHub URLs                                    | `commit_url`, `pr_url`, `compare_url` and `version_url` (off) templates with `{repo}`, `{commit}`, `{pr}`, `{from}`, `{to}`, `{version}` |
+| `links`            | `[]`                                           | buttons on every message, as `text` and `url` templates                                                                                  |
+| `setup`            | off                                            | the installer: `enabled`, `app_name` (`Argo CD`), `command` (`/argocd`), `base_url`                                                      |
+| `clusters`         | n/a                                            | the Argo CD instances to watch; see below                                                                                                |
 
 Each cluster takes `name` (as people type it in `/argocd mute`), `cluster` (the
 EKS cluster name), `role_arn`, `argocd_url`, and optionally `env`, `region`,
