@@ -43,10 +43,16 @@ module "argocd_slack" {
     # annotations your applicationsets set from each app's own repo; without
     # them, messages link the application's source repo and revision
     annotations = {
-      repo   = "example.com/app-repository"
-      commit = "example.com/app-commit"
-      pr     = "example.com/app-pr"
-      title  = "example.com/app-commit-title"
+      repo    = "example.com/app-repository"
+      commit  = "example.com/app-commit"
+      version = "example.com/app-version"
+      run_url = "example.com/app-run-url"
+      changes = "example.com/app-changes"
+    }
+
+    # link each version to its release
+    scm = {
+      version_url = "https://github.com/{repo}/releases/tag/{version}"
     }
 
     # buttons on every message; {app}, {namespace}, {cluster}, {env}, {region}
